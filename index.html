@@ -182,58 +182,6 @@
     .capacity-table th { color: var(--soft); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; }
     .capacity-table strong { font-weight: 900; }
 
-    .breakdown-card {
-      grid-column: 1 / -1;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 22px;
-      padding: 14px;
-      box-shadow: 0 8px 28px rgba(0,0,0,0.055);
-    }
-    .breakdown-head {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      align-items: end;
-      margin-bottom: 10px;
-    }
-    .breakdown-head h3 { margin: 0; font-size: 15px; letter-spacing: -0.02em; }
-    .breakdown-head p { margin: 3px 0 0; color: var(--soft); font-size: 11.5px; line-height: 1.3; }
-    .pill-note {
-      border-radius: 999px;
-      background: #f5f5f7;
-      border: 1px solid rgba(0,0,0,0.06);
-      padding: 5px 8px;
-      color: var(--soft);
-      font-size: 10px;
-      font-weight: 850;
-      white-space: nowrap;
-    }
-    .subject-summary {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-    .subject-card {
-      border: 1px solid rgba(0,0,0,0.07);
-      border-radius: 16px;
-      padding: 10px;
-      background: #fbfbfd;
-    }
-    .subject-card .subject { font-size: 12px; font-weight: 900; margin-bottom: 4px; }
-    .subject-card .big { font-size: 18px; font-weight: 900; letter-spacing: -0.035em; }
-    .subject-card .small { margin-top: 2px; color: var(--soft); font-size: 10.5px; line-height: 1.28; }
-    .unit-table-wrap { overflow-x: auto; border: 1px solid rgba(0,0,0,0.07); border-radius: 16px; }
-    .unit-table { width: 100%; border-collapse: collapse; font-size: 11.5px; min-width: 900px; }
-    .unit-table th, .unit-table td { padding: 7px 7px; border-bottom: 1px solid rgba(0,0,0,0.065); text-align: left; vertical-align: top; }
-    .unit-table th { position: sticky; top: 0; background: #fbfbfd; color: var(--soft); font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.06em; z-index: 1; }
-    .unit-table tr:last-child td { border-bottom: 0; }
-    .unit-table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-    .unit-table .sitting { color: var(--soft); font-weight: 850; }
-    .unit-table .subject-tag { display: inline-flex; border-radius: 999px; padding: 2px 7px; color: white; font-size: 10px; font-weight: 900; }
-    .subject-tag.math { background: var(--blue); }
-    .subject-tag.physics { background: var(--orange); }
     @media (max-width: 900px) {
       .capacity-shell { grid-template-columns: 1fr; }
       .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -543,26 +491,6 @@
             </tbody>
           </table>
         </aside>
-        <section class="breakdown-card" aria-label="Per subject revision and past paper breakdown">
-          <div class="breakdown-head">
-            <div>
-              <h3>Per subject breakdown: revision vs past papers</h3>
-              <p>Revision = content/chapter reactivation at 2h per chapter/topic block. Past papers = 3h each. The 5-paper column is the sensible default target; 6-paper is the stretch case.</p>
-            </div>
-            <div class="pill-note">Assumption: 2h/topic + 3h/paper</div>
-          </div>
-          <div class="subject-summary" id="subjectSummary"></div>
-          <div class="unit-table-wrap">
-            <table class="unit-table">
-              <thead>
-                <tr>
-                  <th>Sitting</th><th>Subject</th><th>Unit</th><th>Revision blocks</th><th class="num">Revision h</th><th class="num">3 papers</th><th class="num">5 papers</th><th class="num">6 papers</th><th class="num">Total @5</th>
-                </tr>
-              </thead>
-              <tbody id="unitBreakdown"></tbody>
-            </table>
-          </div>
-        </section>
       </div>
     </section>
     <div class="footer-note">Drive check: current Paris Attitude #8482 lease at 43 Ave Jean Jaurès ends 7 Mar 2027. Sep date belongs to old Houilles lease anniversary, not this apartment. Permit renewal assumes early-July 2027 expiry.</div>
@@ -695,63 +623,6 @@
     }
     for (const b of tabButtons) b.addEventListener('click', () => setTab(b.dataset.tab));
 
-
-    const units = [
-      { sitting: 'Oct', subject: 'Maths / FM', kind: 'math', unit: 'P1', blocks: 8, notes: 'Pure 1' },
-      { sitting: 'Oct', subject: 'Maths / FM', kind: 'math', unit: 'P2', blocks: 8, notes: 'Pure 2' },
-      { sitting: 'Oct', subject: 'Maths / FM', kind: 'math', unit: 'P3', blocks: 9, notes: 'Pure 3' },
-      { sitting: 'Oct', subject: 'Maths / FM', kind: 'math', unit: 'P4', blocks: 9, notes: 'Pure 4' },
-      { sitting: 'Oct', subject: 'Maths / FM', kind: 'math', unit: 'S1', blocks: 6, notes: 'Statistics 1' },
-      { sitting: 'Oct', subject: 'Maths / FM', kind: 'math', unit: 'M1', blocks: 4, notes: 'Mechanics 1' },
-      { sitting: 'Oct', subject: 'Maths / FM', kind: 'math', unit: 'M2', blocks: 3, notes: 'Mechanics 2' },
-      { sitting: 'Oct', subject: 'Physics', kind: 'physics', unit: 'Physics U1', blocks: 3.5, notes: '3-4 big parts' },
-      { sitting: 'Oct', subject: 'Physics', kind: 'physics', unit: 'Physics U2', blocks: 3.5, notes: '3-4 big parts' },
-      { sitting: 'Oct', subject: 'Physics', kind: 'physics', unit: 'Physics U3', blocks: 3.5, notes: '3-4 big parts' },
-      { sitting: 'Jan', subject: 'Maths / FM', kind: 'math', unit: 'FP1', blocks: 7, notes: 'Further Pure 1' },
-      { sitting: 'Jan', subject: 'Maths / FM', kind: 'math', unit: 'FP2', blocks: 8, notes: 'Further Pure 2' },
-      { sitting: 'Jan', subject: 'Maths / FM', kind: 'math', unit: 'FP3', blocks: 8, notes: 'Further Pure 3' },
-      { sitting: 'Jan', subject: 'Maths / FM', kind: 'math', unit: 'S2', blocks: 6, notes: 'Statistics 2' },
-      { sitting: 'Jan', subject: 'Maths / FM', kind: 'math', unit: 'M3', blocks: 4, notes: 'Mechanics 3' },
-      { sitting: 'Jan', subject: 'Physics', kind: 'physics', unit: 'Physics U4', blocks: 3.5, notes: '3-4 big parts' },
-      { sitting: 'Jan', subject: 'Physics', kind: 'physics', unit: 'Physics U5', blocks: 3.5, notes: '3-4 big parts' },
-      { sitting: 'Jan', subject: 'Physics', kind: 'physics', unit: 'Physics U6', blocks: 3.5, notes: '3-4 big parts' }
-    ];
-    const h = (x) => `${Math.round(x)}h`;
-    const revisionH = (u) => u.blocks * 2;
-    const ppH = (papers) => papers * 3;
-    const unitRows = document.getElementById('unitBreakdown');
-    for (const u of units) {
-      const rev = revisionH(u);
-      unitRows.insertAdjacentHTML('beforeend', `<tr>
-        <td class="sitting">${u.sitting}</td>
-        <td><span class="subject-tag ${u.kind}">${u.subject}</span></td>
-        <td><strong>${u.unit}</strong><br><span style="color:var(--soft)">${u.notes}</span></td>
-        <td>${u.blocks}</td>
-        <td class="num">${h(rev)}</td>
-        <td class="num">${h(ppH(3))}<br><span style="color:var(--soft)">${h(rev + ppH(3))} total</span></td>
-        <td class="num"><strong>${h(ppH(5))}</strong><br><span style="color:var(--soft)">${h(rev + ppH(5))} total</span></td>
-        <td class="num">${h(ppH(6))}<br><span style="color:var(--soft)">${h(rev + ppH(6))} total</span></td>
-        <td class="num"><strong>${h(rev + ppH(5))}</strong></td>
-      </tr>`);
-    }
-    const summaryGroups = [
-      ['Oct Maths/FM', u => u.sitting === 'Oct' && u.kind === 'math', 354],
-      ['Oct Physics', u => u.sitting === 'Oct' && u.kind === 'physics', 354],
-      ['Jan Maths/FM', u => u.sitting === 'Jan' && u.kind === 'math', 222],
-      ['Jan Physics', u => u.sitting === 'Jan' && u.kind === 'physics', 222]
-    ];
-    const subjectSummary = document.getElementById('subjectSummary');
-    for (const [label, pred, windowHours] of summaryGroups) {
-      const selected = units.filter(pred);
-      const rev = selected.reduce((a,u) => a + revisionH(u), 0);
-      const pp5 = selected.length * ppH(5);
-      const total5 = rev + pp5;
-      subjectSummary.insertAdjacentHTML('beforeend', `<div class="subject-card">
-        <div class="subject">${label}</div>
-        <div class="big">${h(total5)}</div>
-        <div class="small">${h(rev)} revision + ${h(pp5)} past papers @5/unit<br>${selected.length} units · window basis ${h(windowHours)} shared</div>
-      </div>`);
-    }
 
     function scrollToDate(date) {
       const canvas = document.querySelector('.timeline-canvas');
