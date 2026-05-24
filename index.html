@@ -102,6 +102,90 @@
     }
     button:hover { border-color: var(--blue); color: var(--blue); background: rgba(0,113,227,0.06); transform: translateY(-1px); }
 
+
+    .tabs {
+      padding: 0 12px 6px;
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .tab-btn {
+      border-color: transparent;
+      background: rgba(255,255,255,0.7);
+      color: var(--soft);
+    }
+    .tab-btn.active {
+      background: var(--text);
+      color: white;
+      border-color: var(--text);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.14);
+    }
+    .tab-btn.active:hover { color: white; background: var(--text); transform: none; }
+    .view { display: none; }
+    .view.active { display: block; }
+    .timeline-wrap.view.active { display: block; }
+    .capacity-view {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: auto;
+      padding: 0 12px 10px;
+    }
+    .capacity-shell {
+      max-width: 1180px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 12px;
+    }
+    .capacity-card, .capacity-table-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.055);
+    }
+    .capacity-card { padding: 18px; }
+    .capacity-card h2 {
+      margin: 0 0 5px;
+      font-size: 26px;
+      letter-spacing: -0.05em;
+      line-height: 1;
+    }
+    .capacity-card p { margin: 0; color: var(--soft); font-size: 13px; line-height: 1.35; }
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 14px;
+    }
+    .metric {
+      border: 1px solid rgba(0,0,0,0.07);
+      border-radius: 16px;
+      padding: 11px;
+      background: #fbfbfd;
+    }
+    .metric .value { font-size: 22px; font-weight: 900; letter-spacing: -0.04em; }
+    .metric .label { margin-top: 2px; color: var(--soft); font-size: 10px; font-weight: 850; text-transform: uppercase; letter-spacing: 0.06em; }
+    .capacity-list { margin-top: 14px; display: grid; gap: 8px; }
+    .capacity-item {
+      border: 1px solid rgba(0,0,0,0.07);
+      border-radius: 16px;
+      padding: 12px;
+      background: linear-gradient(180deg, #fff, #fbfbfd);
+    }
+    .capacity-item h3 { margin: 0 0 4px; font-size: 14px; letter-spacing: -0.02em; }
+    .capacity-item .dates { color: var(--soft); font-size: 11px; font-weight: 800; margin-bottom: 5px; }
+    .capacity-item p { font-size: 12px; line-height: 1.38; }
+    .capacity-table-card { padding: 14px; }
+    .capacity-table-card h3 { margin: 0 0 9px; font-size: 15px; letter-spacing: -0.02em; }
+    .capacity-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .capacity-table th, .capacity-table td { padding: 8px 6px; border-bottom: 1px solid rgba(0,0,0,0.07); text-align: left; vertical-align: top; }
+    .capacity-table th { color: var(--soft); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .capacity-table strong { font-weight: 900; }
+    @media (max-width: 900px) {
+      .capacity-shell { grid-template-columns: 1fr; }
+      .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
     .timeline-wrap {
       width: 100vw;
       flex: 1 1 auto;
@@ -369,14 +453,45 @@
       <div class="now-pill">Today marker: 24 May 2026</div>
     </header>
 
+    <div class="tabs" role="tablist" aria-label="Website sections">
+      <button class="tab-btn active" type="button" data-tab="timeline" role="tab" aria-selected="true">Timeline</button>
+      <button class="tab-btn" type="button" data-tab="capacity" role="tab" aria-selected="false">Study capacity</button>
+    </div>
     <div class="controls" id="controls"></div>
-    <main class="timeline-wrap" id="wrap" aria-label="Scrollable short-term priority timeline">
+    <main class="timeline-wrap view active" id="timelineView" aria-label="Scrollable short-term priority timeline">
       <div class="timeline-canvas">
         <div class="axis-label">Date line</div>
         <div class="axis" id="axis"></div>
         <div class="grid" id="grid"><div class="grid-lines" id="gridLines"></div></div>
       </div>
     </main>
+    <section class="capacity-view view" id="capacityView" aria-label="Study capacity calculations">
+      <div class="capacity-shell">
+        <article class="capacity-card">
+          <h2>Study capacity</h2>
+          <p>Separate from the timeline so the hour math is readable instead of hidden inside hover tooltips.</p>
+          <div class="metric-grid">
+            <div class="metric"><div class="value">18h</div><div class="label">per week</div></div>
+            <div class="metric"><div class="value">≈78h</div><div class="label">per month</div></div>
+            <div class="metric"><div class="value">≈410h</div><div class="label">to end Oct</div></div>
+            <div class="metric"><div class="value">≈636h</div><div class="label">to 25 Jan</div></div>
+          </div>
+          <div class="capacity-list" id="capacityList"></div>
+        </article>
+        <aside class="capacity-table-card">
+          <h3>Workload verdict</h3>
+          <table class="capacity-table">
+            <thead><tr><th>Window</th><th>Need</th><th>Verdict</th></tr></thead>
+            <tbody>
+              <tr><td><strong>October</strong><br>P1 P2 P3 P4 M1 S1 M2 + Physics U1-3</td><td>≈202-298h depending on 3-6 papers/unit</td><td><strong>Enough</strong><br>≈354h before first Oct exam, ≈410h to end window.</td></tr>
+              <tr><td><strong>January</strong><br>FP1 FP2 FP3 S2 M3 + Physics U4-6</td><td>≈156-234h depending on 3-6 papers/unit</td><td><strong>Enough for 3-5 papers/unit</strong><br>6 papers/unit needs preloading before Oct ends.</td></tr>
+              <tr><td><strong>Languages</strong><br>English 2h + French 2.5h</td><td>4.5h/week, ≈19.5h/month</td><td><strong>Maintenance only</strong><br>Leaves A-levels at 13.5h/week.</td></tr>
+              <tr><td><strong>French only</strong></td><td>2.5h/week, ≈10.8h/month</td><td><strong>Safer</strong><br>Leaves A-levels at 15.5h/week.</td></tr>
+            </tbody>
+          </table>
+        </aside>
+      </div>
+    </section>
     <div class="footer-note">Drive check: current Paris Attitude #8482 lease at 43 Ave Jean Jaurès ends 7 Mar 2027. Sep date belongs to old Houilles lease anniversary, not this apartment. Permit renewal assumes early-July 2027 expiry.</div>
   </div>
 
@@ -452,7 +567,7 @@
     const axis = document.getElementById('axis');
     const grid = document.getElementById('grid');
     const lines = document.getElementById('gridLines');
-    const wrap = document.getElementById('wrap');
+    const wrap = document.getElementById('timelineView');
 
     for (const m of months()) {
       axis.insertAdjacentHTML('beforeend', `<div class="tick ${m.year ? 'year' : ''}" style="left:${pctAt(m.date)}%"><span>${m.label}</span></div>`);
@@ -461,7 +576,7 @@
     axis.insertAdjacentHTML('beforeend', `<div class="today-line" style="left:${pctAt(TODAY)}%"><span>today · ${fmt(TODAY)}</span></div>`);
     lines.insertAdjacentHTML('beforeend', `<span class="today" style="left:${pctAt(TODAY)}%"></span>`);
 
-    for (const row of rows) {
+    for (const row of rows.filter(r => r.group !== 'Capacity')) {
       const content = row.marker
         ? marker(row, row.start, row.markerLabel || fmt(row.start), row.tone)
         : `${(row.segments || [row]).map(s => block(row, s)).join('')}${(row.pauses || []).map(pause).join('')}${row.markerDate ? marker(row, row.markerDate, row.markerLabel || fmt(row.markerDate), row.tone, row.markerLabel || row.title) : ''}`;
@@ -484,6 +599,28 @@
       b.type = 'button'; b.textContent = label; b.onclick = fn;
       controlsEl.appendChild(b);
     }
+
+    const capacityList = document.getElementById('capacityList');
+    for (const row of rows.filter(r => r.group === 'Capacity')) {
+      capacityList.insertAdjacentHTML('beforeend', `<section class="capacity-item"><h3>${row.title}</h3><div class="dates">${fmtLong(row.start)} → ${fmtLong(row.end)}</div><p>${row.detail}</p></section>`);
+    }
+
+    const tabButtons = [...document.querySelectorAll('.tab-btn')];
+    const controlsBar = document.getElementById('controls');
+    const timelineView = document.getElementById('timelineView');
+    const capacityView = document.getElementById('capacityView');
+    function setTab(tab) {
+      const showTimeline = tab === 'timeline';
+      timelineView.classList.toggle('active', showTimeline);
+      capacityView.classList.toggle('active', !showTimeline);
+      controlsBar.style.display = showTimeline ? 'flex' : 'none';
+      for (const b of tabButtons) {
+        const active = b.dataset.tab === tab;
+        b.classList.toggle('active', active);
+        b.setAttribute('aria-selected', active ? 'true' : 'false');
+      }
+    }
+    for (const b of tabButtons) b.addEventListener('click', () => setTab(b.dataset.tab));
 
     function scrollToDate(date) {
       const canvas = document.querySelector('.timeline-canvas');
