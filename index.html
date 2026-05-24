@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Short-term Priority Timeline</title>
+  <style>
+    :root {
+      --text: #1d1d1f;
+      --soft: #6e6e73;
+      --muted: #8e8e93;
+      --border: #d8d8de;
+      --bg: #f5f5f7;
+      --panel: #ffffff;
+      --blue: #0071e3;
+      --red: #ff3b30;
+      --orange: #ff9500;
+      --green: #34c759;
+      --purple: #6d5dfc;
+      --label-w: 204px;
+      --canvas-w: 3900px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    .page {
+      width: 100vw;
+      height: 100vh;
+      padding: 8px 0 10px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 0 12px 5px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 10px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(18px, 2vw, 28px);
+      letter-spacing: -0.045em;
+      line-height: 1;
+    }
+
+    .sub {
+      margin-top: 2px;
+      color: var(--soft);
+      font-size: 11px;
+      max-width: 900px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .now-pill {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-size: 10.5px;
+      font-weight: 850;
+      color: var(--soft);
+      white-space: nowrap;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.035);
+    }
+
+    .controls {
+      padding: 0 12px 5px;
+      display: flex;
+      gap: 5px;
+      flex-wrap: nowrap;
+      align-items: center;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .controls::-webkit-scrollbar { display: none; }
+
+    button {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-size: 10.5px;
+      font-weight: 850;
+      cursor: pointer;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.035);
+      transition: 0.16s ease;
+      white-space: nowrap;
+    }
+    button:hover { border-color: var(--blue); color: var(--blue); background: rgba(0,113,227,0.06); transform: translateY(-1px); }
+
+    .timeline-wrap {
+      width: 100vw;
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 0 0 8px;
+      cursor: grab;
+      scrollbar-gutter: stable;
+      overscroll-behavior-x: contain;
+    }
+    .timeline-wrap.dragging { cursor: grabbing; user-select: none; }
+    .timeline-wrap::-webkit-scrollbar { height: 9px; }
+    .timeline-wrap::-webkit-scrollbar-track { background: rgba(0,0,0,0.045); border-radius: 999px; }
+    .timeline-wrap::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.24); border-radius: 999px; }
+
+    .timeline-canvas {
+      min-width: var(--canvas-w);
+      display: grid;
+      grid-template-columns: var(--label-w) minmax(0, 1fr);
+      gap: 0 10px;
+      padding: 0 14px 4px 0;
+    }
+
+    .axis-label {
+      position: sticky;
+      left: 0;
+      z-index: 12;
+      padding: 8px 8px 0 12px;
+      background: linear-gradient(90deg, var(--bg) 84%, rgba(245,245,247,0));
+      color: var(--soft);
+      font-size: 9px;
+      font-weight: 900;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .axis {
+      position: relative;
+      height: 31px;
+      border-bottom: 1px solid var(--border);
+    }
+    .tick {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      border-left: 1px solid var(--border);
+      transform: translateX(-1px);
+    }
+    .tick span {
+      position: absolute;
+      top: 5px;
+      left: 5px;
+      font-size: 10px;
+      font-weight: 800;
+      color: var(--soft);
+      white-space: nowrap;
+    }
+    .tick.year span { color: var(--text); font-size: 10.5px; }
+
+    .today-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--text);
+      z-index: 7;
+    }
+    .today-line span {
+      position: absolute;
+      top: 18px;
+      left: 5px;
+      white-space: nowrap;
+      border-radius: 999px;
+      background: var(--text);
+      color: white;
+      padding: 2px 6px;
+      font-size: 9px;
+      font-weight: 900;
+    }
+
+    .grid {
+      position: relative;
+      grid-column: 1 / -1;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      padding-top: 4px;
+    }
+    .grid-lines {
+      position: absolute;
+      left: calc(var(--label-w) + 10px);
+      right: 14px;
+      top: 0;
+      bottom: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .grid-lines span {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: var(--border);
+      opacity: 0.72;
+    }
+    .grid-lines .today { width: 2px; background: var(--text); opacity: 1; }
+
+    .row {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: var(--label-w) minmax(0, 1fr);
+      gap: 10px;
+      min-height: 30px;
+      align-items: center;
+    }
+    .row-label {
+      position: sticky;
+      left: 0;
+      z-index: 10;
+      min-width: 0;
+      padding: 3px 8px 3px 12px;
+      background: linear-gradient(90deg, var(--bg) 86%, rgba(245,245,247,0));
+    }
+    .group {
+      color: var(--soft);
+      font-size: 8px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .name {
+      margin-top: 0;
+      font-size: 11px;
+      font-weight: 820;
+      letter-spacing: -0.015em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .track {
+      position: relative;
+      height: 24px;
+      border-radius: 9px;
+      background: rgba(0,0,0,0.025);
+      border: 1px solid rgba(0,0,0,0.04);
+      overflow: visible;
+    }
+    .block {
+      position: absolute;
+      top: 3px;
+      bottom: 3px;
+      min-width: 34px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 0 7px;
+      color: white;
+      font-size: 9.5px;
+      font-weight: 900;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+      overflow: visible;
+      white-space: nowrap;
+    }
+    .block small { opacity: 0.82; font-size: 8.5px; font-weight: 800; }
+    .blue { background: var(--blue); }
+    .red { background: var(--red); }
+    .orange { background: var(--orange); }
+    .green { background: var(--green); }
+    .purple { background: var(--purple); }
+    .neutral { background: var(--muted); }
+
+    .pause {
+      position: absolute;
+      top: 3px;
+      bottom: 3px;
+      min-width: 34px;
+      border-radius: 999px;
+      border: 1px dashed rgba(0,0,0,0.28);
+      background: repeating-linear-gradient(135deg, rgba(0,0,0,0.035), rgba(0,0,0,0.035) 4px, rgba(255,255,255,0.72) 4px, rgba(255,255,255,0.72) 8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--soft);
+      font-size: 8.5px;
+      font-weight: 900;
+      white-space: nowrap;
+      overflow: visible;
+    }
+    .pause > span:not(.tip) { background: rgba(255,255,255,0.88); border-radius: 999px; padding: 1px 5px; }
+
+    .marker {
+      position: absolute;
+      top: 2px;
+      bottom: 2px;
+      width: 1px;
+      transform: translateX(-50%);
+      z-index: 4;
+      color: currentColor;
+    }
+    .marker-line { position: absolute; left: 0; top: 0; bottom: 0; width: 2px; border-radius: 99px; background: currentColor; }
+    .marker-dot { position: absolute; left: -4px; top: 50%; transform: translateY(-50%); width: 10px; height: 10px; border-radius: 99px; background: currentColor; border: 2px solid white; box-shadow: 0 1px 5px rgba(0,0,0,0.2); }
+    .marker-label { position: absolute; left: 7px; top: 50%; transform: translateY(-50%); border-radius: 999px; border: 1px solid currentColor; background: white; color: currentColor; padding: 1px 5px; font-size: 8.5px; font-weight: 900; white-space: nowrap; box-shadow: 0 1px 5px rgba(0,0,0,0.08); }
+    .marker.blue { color: var(--blue); } .marker.red { color: var(--red); } .marker.orange { color: var(--orange); } .marker.green { color: var(--green); } .marker.purple { color: var(--purple); } .marker.neutral { color: var(--muted); }
+
+    .tip {
+      position: absolute;
+      left: 50%;
+      bottom: calc(100% + 8px);
+      transform: translateX(-50%) translateY(4px);
+      min-width: 220px;
+      max-width: 320px;
+      padding: 9px 10px;
+      border-radius: 13px;
+      background: rgba(255,255,255,0.98);
+      border: 1px solid rgba(0,0,0,0.12);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.16);
+      color: var(--text);
+      font-size: 10.5px;
+      font-weight: 650;
+      line-height: 1.32;
+      white-space: normal;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 40;
+      transition: opacity .16s ease, transform .16s ease;
+    }
+    .tip strong, .tip em { display: block; }
+    .tip strong { font-size: 11.5px; margin-bottom: 2px; }
+    .tip em { color: var(--soft); font-style: normal; margin-bottom: 4px; }
+    .block:hover, .pause:hover, .marker:hover { z-index: 45; }
+    .block:hover .tip, .pause:hover .tip, .marker:hover .tip { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .marker .tip { left: 12px; transform: translateY(4px); }
+    .marker:hover .tip { transform: translateY(0); }
+
+    .footer-note {
+      padding: 3px 12px 0;
+      color: var(--soft);
+      font-size: 10px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 0 0 auto;
+    }
+
+    @media (max-width: 760px) {
+      :root { --label-w: 150px; --canvas-w: 3200px; }
+      header { grid-template-columns: 1fr; align-items: start; }
+      .row-label, .axis-label { padding-left: 10px; }
+      .name { font-size: 12px; }
+      .block small { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div>
+        <h1>Short-term priority timeline</h1>
+        <div class="sub">Full-width planning view. No dashboard side gutters. Drag horizontally, use the buttons, and hover blocks/markers for detailed notes.</div>
+      </div>
+      <div class="now-pill">Today marker: 24 May 2026</div>
+    </header>
+
+    <div class="controls" id="controls"></div>
+    <main class="timeline-wrap" id="wrap" aria-label="Scrollable short-term priority timeline">
+      <div class="timeline-canvas">
+        <div class="axis-label">Date line</div>
+        <div class="axis" id="axis"></div>
+        <div class="grid" id="grid"><div class="grid-lines" id="gridLines"></div></div>
+      </div>
+    </main>
+    <div class="footer-note">Drive check: current Paris Attitude #8482 lease at 43 Ave Jean Jaurès ends 7 Mar 2027. Sep date belongs to old Houilles lease anniversary, not this apartment. Permit renewal assumes early-July 2027 expiry.</div>
+  </div>
+
+  <script>
+    const TODAY = '2026-05-24';
+    const START = '2026-05-24';
+    const END = '2028-12-31';
+
+    const rows = [
+      { group: 'Capacity', title: 'Raw study capacity', start: '2026-05-24', end: '2027-01-25', tone: 'green', detail: 'Baseline schedule: weekdays 9-11 = 10h/week; Sat 9-13 = 4h; Sun 9-13 = 4h. Total 18h/week = about 78h/month. From 24 May to Oct 8 = 354h; to Oct 30 = 410h; Nov 1 to Jan 25 = 222h; 24 May to Jan 25 = 636h.' },
+      { group: 'Capacity', title: 'Oct exam workload check', start: '2026-05-24', end: '2026-10-08', tone: 'blue', detail: 'Default Oct split: P1 P2 P3 P4 M1 S1 M2 plus Physics Units 1-3 = 10 units. Content estimate 112-118h. With 3/4/5/6 papers per unit: total 202-208h / 232-238h / 262-268h / 292-298h. Against 354h before first Oct exam: enough, with 56-146h leftover depending paper target.' },
+      { group: 'Capacity', title: 'Jan exam workload check', start: '2026-11-01', end: '2027-01-25', tone: 'purple', detail: 'Default Jan split: FP1 FP2 FP3 S2 M3 plus Physics Units 4-6 = 8 units. Content estimate 84-90h. With 3/4/5/6 papers per unit: total 156-162h / 180-186h / 204-210h / 228-234h. Against 222h from Nov 1 to Jan 25: 3-5 papers/unit fits; 6 needs preloading before October ends.' },
+      { group: 'Capacity', title: 'English + French option', start: '2026-05-24', end: '2027-01-25', tone: 'neutral', detail: 'If English = 2h/week and French = 2.5h/week, languages take 4.5h/week = about 19.5h/month. A-level protected time drops from 18h/week to 13.5h/week. By Oct 30 this spends about 102h on languages; by Jan 25 about 158h. OK only as maintenance/light progress.' },
+      { group: 'Capacity', title: 'French-only option', start: '2026-05-24', end: '2027-01-25', tone: 'green', detail: 'French only at 2.5h/week leaves 15.5h/week for A-levels. French gets about 10.8h/month, 56.8h by Oct 30, and 87.9h by Jan 25. Safer while A-levels are priority. If using the full 4.5h/week only for French, French gets about 158h by Jan 25.' },
+      { group: 'Accent', title: 'Accent class', start: '2026-05-24', end: '2026-12-31', tone: 'green', detail: 'Accent class · now → end Dec' },
+      { group: 'Physics', title: 'Physics prep', start: '2026-05-24', end: '2027-01-10', tone: 'orange', detail: 'Physics prep', markerDate: '2027-01-11', markerLabel: 'exams' },
+      { group: 'Registration', title: 'A-level registration TBC', start: '2026-08-29', end: '2026-08-29', tone: 'blue', marker: true, markerLabel: 'TBC', detail: 'Pearson 2026/27 official entry deadline not published here yet; centre may set earlier deadline' },
+      { group: 'Registration', title: 'ESAT booking closes', start: '2026-09-28', end: '2026-09-28', tone: 'red', marker: true, markerLabel: 'closes', detail: 'Official UAT-UK October booking deadline: 28 Sep 2026, 6pm BST' },
+      { group: 'A-level', title: 'P1 P2 P3 P4 S1 M1 M2 prep', start: '2026-05-24', end: '2026-10-08', tone: 'blue', detail: 'P1 9 Oct, M1 13 Oct, P2 15 Oct, S1 19 Oct, P3 21 Oct, M2 22 Oct, P4 28 Oct', markerDate: '2026-10-09', markerLabel: 'exams' },
+      { group: 'A-level', title: 'FP1 FP2 FP3 S2 M3 prep', start: '2026-11-07', end: '2027-01-13', tone: 'purple', detail: 'FP1 14 Jan, S2 18 Jan, FP2 20 Jan, FP3 21 Jan, M3 25 Jan', markerDate: '2027-01-14', markerLabel: 'exams' },
+      { group: 'ESAT', title: 'ESAT Math prep', start: '2026-05-24', end: '2026-10-11', tone: 'red', detail: 'ESAT Mathematics prep · official test window 12-16 Oct 2026', markerDate: '2026-10-12', markerLabel: 'test' },
+      { group: 'ESAT', title: 'ESAT Physics prep', start: '2026-06-15', end: '2026-10-11', tone: 'orange', detail: 'ESAT Physics prep · mid-June → test window', markerDate: '2026-10-12', markerLabel: 'test' },
+      { group: 'IELTS', title: 'IELTS prep', start: '2026-12-01', end: '2027-05-31', tone: 'green', detail: 'IELTS prep · start Dec → end May' },
+      { group: 'Life', title: 'French', start: '2026-05-24', end: '2027-05-31', tone: 'neutral', detail: 'French maintenance · low daily load, protect Oct/Jan exam weeks' },
+      { group: 'Life', title: 'Automatic driving', start: '2026-07-01', end: '2026-11-30', tone: 'orange', detail: 'Automatic chill path · Jul-Sep lessons, hard pause through Oct exams, resume Nov; ~17-18h total at 1h/week', segments: [ { start: '2026-07-01', end: '2026-09-30', label: 'lessons', dates: 'Jul → Sep' }, { start: '2026-11-01', end: '2026-11-30', label: 'finish', dates: 'Nov' } ], pauses: [ { start: '2026-10-01', end: '2026-10-31', label: 'pause · exams' } ] },
+      { group: 'Life', title: 'Swim', start: '2027-02-01', end: '2027-05-31', tone: 'blue', detail: 'Swim chill path · Feb-May gives ~16-18 weekly sessions' },
+      { group: 'Housing', title: 'New apartment search', start: '2027-01-07', end: '2027-03-07', tone: 'purple', detail: 'Verified in Drive: current Paris Attitude #8482 lease at 43 Ave Jean Jaurès runs 07 Mar 2026 → 07 Mar 2027. Sep date found is the OLD Houilles lease anniversary, not the current Paris apartment.', segments: [ { start: '2027-01-07', end: '2027-01-13', label: 'scout', dates: 'from 7 Jan' }, { start: '2027-01-26', end: '2027-03-07', label: 'search + move', dates: '26 Jan → 7 Mar' } ], pauses: [ { start: '2027-01-14', end: '2027-01-25', label: 'pause · Jan exams' } ], markerDate: '2027-03-07', markerLabel: 'lease ends' },
+      { group: 'Admin', title: 'French permit renewal', start: '2027-03-09', end: '2027-05-09', tone: 'red', detail: 'Assuming permit expires 9 Jul 2027: renewal window opens ~4 months before; submit by ~9 May at latest', markerDate: '2027-07-09', markerLabel: 'expires' }
+    ];
+
+    const startMs = new Date(START).getTime();
+    const endMs = new Date(END).getTime();
+    const total = endMs - startMs;
+    const pctAt = (d) => Math.min(100, Math.max(0, ((new Date(d).getTime() - startMs) / total) * 100));
+    const fmt = (d, opts = { day: '2-digit', month: 'short' }) => new Date(d).toLocaleDateString('en-GB', opts);
+    const fmtLong = (d) => fmt(d, { day: '2-digit', month: 'short', year: '2-digit' });
+
+    function months() {
+      const out = [];
+      const d = new Date(START);
+      d.setDate(1);
+      const e = new Date(END);
+      while (d <= e) {
+        const label = d.getMonth() === 0 ? d.toLocaleDateString('en-GB', { month: 'short' }) + ' ' + String(d.getFullYear()).slice(2) : d.toLocaleDateString('en-GB', { month: 'short' });
+        out.push({ label, date: d.toISOString().slice(0, 10), year: d.getMonth() === 0 });
+        d.setMonth(d.getMonth() + 1);
+      }
+      return out;
+    }
+
+    function tip(title, date, detail) {
+      return `<span class="tip"><strong>${title}</strong><em>${date}</em>${detail}</span>`;
+    }
+
+    function marker(row, date, label, tone, detailTitle = row.title) {
+      return `<div class="marker ${tone}" style="left:${pctAt(date)}%" title="${label} · ${fmtLong(date)}"><span class="marker-line"></span><span class="marker-dot"></span><span class="marker-label">${label}</span>${tip(detailTitle, fmtLong(date), row.detail)}</div>`;
+    }
+
+    function block(row, segment = row) {
+      const left = pctAt(segment.start);
+      const width = Math.max(1.2, pctAt(segment.end) - left);
+      const label = segment.label || row.title;
+      const dates = segment.dates || `${fmt(segment.start)} → ${fmt(segment.end)}`;
+      return `<div class="block ${row.tone}" style="left:${left}%;width:${width}%" title="${row.title}\n${fmtLong(segment.start)} → ${fmtLong(segment.end)}\n${row.detail}"><span>${label}</span><small>${dates}</small>${tip(row.title + (segment.label ? ' · ' + segment.label : ''), `${fmtLong(segment.start)} → ${fmtLong(segment.end)}`, row.detail)}</div>`;
+    }
+
+    function pause(p) {
+      const left = pctAt(p.start);
+      const width = Math.max(1.2, pctAt(p.end) - left);
+      return `<div class="pause" style="left:${left}%;width:${width}%" title="${p.label}\n${fmtLong(p.start)} → ${fmtLong(p.end)}"><span>${p.label}</span>${tip(p.label, `${fmtLong(p.start)} → ${fmtLong(p.end)}`, 'Protected blank break — no scheduling here.')}</div>`;
+    }
+
+    const axis = document.getElementById('axis');
+    const grid = document.getElementById('grid');
+    const lines = document.getElementById('gridLines');
+    const wrap = document.getElementById('wrap');
+
+    for (const m of months()) {
+      axis.insertAdjacentHTML('beforeend', `<div class="tick ${m.year ? 'year' : ''}" style="left:${pctAt(m.date)}%"><span>${m.label}</span></div>`);
+      lines.insertAdjacentHTML('beforeend', `<span style="left:${pctAt(m.date)}%"></span>`);
+    }
+    axis.insertAdjacentHTML('beforeend', `<div class="today-line" style="left:${pctAt(TODAY)}%"><span>today · ${fmt(TODAY)}</span></div>`);
+    lines.insertAdjacentHTML('beforeend', `<span class="today" style="left:${pctAt(TODAY)}%"></span>`);
+
+    for (const row of rows) {
+      const content = row.marker
+        ? marker(row, row.start, row.markerLabel || fmt(row.start), row.tone)
+        : `${(row.segments || [row]).map(s => block(row, s)).join('')}${(row.pauses || []).map(pause).join('')}${row.markerDate ? marker(row, row.markerDate, row.markerLabel || fmt(row.markerDate), row.tone, row.markerLabel || row.title) : ''}`;
+      grid.insertAdjacentHTML('beforeend', `<div class="row"><div class="row-label"><div class="group">${row.group}</div><div class="name">${row.title}</div></div><div class="track">${content}</div></div>`);
+    }
+
+    const controls = [
+      ['←', () => wrap.scrollBy({ left: -Math.round(wrap.clientWidth * .8), behavior: 'smooth' })],
+      ['Today', () => scrollToDate(TODAY)],
+      ['Oct exams', () => scrollToDate('2026-10-01')],
+      ['Jan exams', () => scrollToDate('2027-01-01')],
+      ['Housing', () => scrollToDate('2027-03-01')],
+      ['Permit', () => scrollToDate('2027-07-09')],
+      ['2028', () => scrollToDate('2028-01-01')],
+      ['→', () => wrap.scrollBy({ left: Math.round(wrap.clientWidth * .8), behavior: 'smooth' })]
+    ];
+    const controlsEl = document.getElementById('controls');
+    for (const [label, fn] of controls) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.textContent = label; b.onclick = fn;
+      controlsEl.appendChild(b);
+    }
+
+    function scrollToDate(date) {
+      const canvas = document.querySelector('.timeline-canvas');
+      const target = (pctAt(date) / 100) * canvas.scrollWidth;
+      wrap.scrollTo({ left: Math.max(0, target - wrap.clientWidth * 0.24), behavior: 'smooth' });
+    }
+
+    let dragging = false, startX = 0, startScroll = 0;
+    wrap.addEventListener('pointerdown', e => {
+      if (e.button !== 0) return;
+      dragging = true; startX = e.clientX; startScroll = wrap.scrollLeft;
+      wrap.classList.add('dragging'); wrap.setPointerCapture?.(e.pointerId);
+    });
+    wrap.addEventListener('pointermove', e => {
+      if (!dragging) return;
+      e.preventDefault(); wrap.scrollLeft = startScroll - (e.clientX - startX);
+    });
+    const stopDrag = e => { dragging = false; wrap.classList.remove('dragging'); try { wrap.releasePointerCapture?.(e.pointerId); } catch {} };
+    wrap.addEventListener('pointerup', stopDrag);
+    wrap.addEventListener('pointerleave', stopDrag);
+    wrap.addEventListener('wheel', e => {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { wrap.scrollLeft += e.deltaY; e.preventDefault(); }
+    }, { passive: false });
+  </script>
+</body>
+</html>
